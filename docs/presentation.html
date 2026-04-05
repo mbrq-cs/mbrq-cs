@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI-Driven Development: Field Report</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #f4f2ef;
+    --bg-surface: #eae7e3;
+    --text: #1a1816;
+    --text-dim: #4a4642;
+    --text-muted: #908a84;
+    --accent: #a16a3a;
+    --accent-dim: rgba(161, 106, 58, 0.09);
+    --accent-glow: rgba(161, 106, 58, 0.05);
+    --code-bg: rgba(0,0,0,0.03);
+    --well-bg: rgba(0,0,0,0.025);
+    --border-subtle: rgba(0,0,0,0.06);
+    --font-heading: 'Outfit', sans-serif;
+    --font-body: 'Manrope', sans-serif;
+    --slide-pad-x: 8vw;
+    --slide-pad-top: 12vh;
+  }
+
+  html, body {
+    height: 100%; width: 100%;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: radial-gradient(circle, rgba(0,0,0,0.04) 1px, transparent 1px);
+    background-size: 32px 32px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    top: -20vh; right: -10vw;
+    width: 60vw; height: 60vh;
+    background: radial-gradient(ellipse, var(--accent-glow), transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .deck { position: relative; width: 100%; height: 100%; }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    max-width: 96ch;
+    margin: 0 auto;
+    padding: var(--slide-pad-top) var(--slide-pad-x) 6vh;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.5s ease, visibility 0s 0.5s;
+    z-index: 1;
+    overflow-y: auto;
+  }
+  .slide.active {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.5s ease, visibility 0s 0s;
+  }
+
+  /* FIX #3: fade only, no vertical movement */
+  .slide.active .s-anim { animation: fadeIn 0.5s ease both; }
+  .slide.active .s-anim:nth-child(1) { animation-delay: 0.08s; }
+  .slide.active .s-anim:nth-child(2) { animation-delay: 0.16s; }
+  .slide.active .s-anim:nth-child(3) { animation-delay: 0.24s; }
+  .slide.active .s-anim:nth-child(4) { animation-delay: 0.32s; }
+  .slide.active .s-anim:nth-child(5) { animation-delay: 0.40s; }
+  .slide.active .s-anim:nth-child(6) { animation-delay: 0.48s; }
+  .slide.active .s-anim:nth-child(7) { animation-delay: 0.56s; }
+  .slide.active .s-anim:nth-child(8) { animation-delay: 0.64s; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  h1 {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: clamp(2rem, 4vw, 3.2rem);
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    margin-bottom: 3.5vh;
+  }
+  h1 .accent { color: var(--accent); }
+
+  .slide-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 1.8vh;
+    max-width: 80ch;
+  }
+  .slide--wide .slide-body { max-width: none; }
+
+  p, li {
+    font-size: clamp(0.95rem, 1.6vw, 1.15rem);
+    line-height: 1.7;
+    color: var(--text-dim);
+    font-weight: 400;
+  }
+  li { padding-left: 0.2em; }
+
+  ul {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.7vh;
+  }
+  ul li::before {
+    content: '';
+    display: inline-block;
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    margin-right: 12px;
+    vertical-align: middle;
+    position: relative;
+    top: -1px;
+  }
+
+  strong { color: var(--text); font-weight: 600; }
+
+  .tag {
+    display: inline-block;
+    font-family: var(--font-heading);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 1vh;
+  }
+
+  .stat {
+    font-family: var(--font-heading);
+    font-size: clamp(2.4rem, 5vw, 4rem);
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1;
+    letter-spacing: -0.03em;
+  }
+  .stat-label {
+    font-size: clamp(0.85rem, 1.3vw, 1rem);
+    color: var(--text-muted);
+    margin-top: 0.4vh;
+  }
+  .stats-row { display: flex; gap: 5vw; margin: 2vh 0; }
+
+  .quote-block {
+    border-left: 2px solid var(--accent);
+    padding: 1.6rem 2rem;
+    background: var(--code-bg);
+    border-radius: 0 6px 6px 0;
+    font-size: clamp(0.85rem, 1.4vw, 1.05rem);
+    line-height: 1.7;
+    color: var(--text-dim);
+    font-style: italic;
+  }
+
+  .conclusion-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 1.2rem 0;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .conclusion-item:last-child { border-bottom: none; }
+  .conclusion-num {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 0.8rem;
+    color: var(--accent);
+    min-width: 28px;
+    padding-top: 2px;
+  }
+  .conclusion-text {
+    font-size: clamp(0.9rem, 1.5vw, 1.1rem);
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+
+  /* FIX #4: equal-width pipeline pills */
+  .pipeline {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr auto 1fr auto 1fr;
+    align-items: center;
+    gap: 4px;
+    margin: 2vh 0;
+  }
+  .pipeline-node {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 8px;
+    background: var(--accent-dim);
+    border: 1px solid rgba(161,106,58,0.12);
+    border-radius: 6px;
+    font-family: var(--font-heading);
+    font-size: clamp(0.7rem, 1.1vw, 0.82rem);
+    font-weight: 500;
+    color: var(--text);
+    white-space: nowrap;
+    text-align: center;
+  }
+  .pipeline-arrow { color: var(--text-muted); font-size: 0.85rem; user-select: none; text-align: center; }
+
+  /* file tree */
+  .tree {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: clamp(0.75rem, 1.2vw, 0.88rem);
+    line-height: 1.8;
+    color: var(--text-muted);
+    background: var(--well-bg);
+    padding: 1.4rem 1.8rem;
+    border-radius: 8px;
+  }
+  .tree .accent { color: var(--accent); }
+
+  /* FIX #2: two-col with well cards */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 2vw; }
+  .two-col > div { display: flex; flex-direction: column; gap: 1.4vh; }
+
+  .well {
+    background: var(--well-bg);
+    border-radius: 10px;
+    padding: 1.6rem 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.4vh;
+  }
+  .well-title {
+    font-size: clamp(0.9rem, 1.4vw, 1.05rem);
+    color: var(--text);
+    font-weight: 600;
+    margin-bottom: 0.2vh;
+  }
+
+  .ref {
+    display: inline-block;
+    font-family: var(--font-heading);
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--accent);
+    opacity: 0.7;
+    letter-spacing: 0.05em;
+    margin-left: 6px;
+    vertical-align: super;
+  }
+
+  /* FIX #1: title slide - consistent left alignment within centered container */
+  .slide--title { justify-content: center; padding-top: 0; }
+  .slide--title h1 { font-size: clamp(2.6rem, 5.5vw, 4.4rem); margin-bottom: 2vh; }
+  .slide--title .subtitle {
+    font-size: clamp(1rem, 1.8vw, 1.25rem);
+    color: var(--text-muted);
+    font-weight: 400;
+    margin-bottom: 1vh;
+  }
+
+  .slide--divider { justify-content: center; padding-top: 0; }
+  .slide--divider h1 { font-size: clamp(2.2rem, 4.5vw, 3.6rem); }
+  .slide--divider .section-num {
+    font-family: var(--font-heading);
+    font-size: clamp(0.8rem, 1.2vw, 1rem);
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 2vh;
+  }
+
+  .nav {
+    position: fixed;
+    bottom: 3vh;
+    right: var(--slide-pad-x);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    z-index: 100;
+    user-select: none;
+  }
+  .nav-counter {
+    font-family: var(--font-heading);
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    letter-spacing: 0.05em;
+  }
+  .nav-btn {
+    width: 36px; height: 36px;
+    border: 1px solid rgba(0,0,0,0.1);
+    border-radius: 6px;
+    background: rgba(0,0,0,0.03);
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    font-size: 1rem;
+  }
+  .nav-btn:hover {
+    border-color: var(--accent);
+    background: var(--accent-dim);
+    color: var(--text);
+  }
+
+  .progress {
+    position: fixed;
+    top: 0; left: 0;
+    height: 2px;
+    background: var(--accent);
+    transition: width 0.4s ease;
+    z-index: 100;
+  }
+
+  .pipeline-expanded {
+    transform: scale(1.5) translate(16%, 16%);
+  }
+
+  @media (max-width: 768px) {
+    :root { --slide-pad-x: 6vw; --slide-pad-top: 8vh; }
+    .two-col { grid-template-columns: 1fr; gap: 2vh; }
+    .stats-row { flex-direction: column; gap: 2vh; }
+    .pipeline { grid-template-columns: 1fr; gap: 4px; }
+    .pipeline-arrow { display: none; }
+    .pipeline-node { padding: 8px 12px; font-size: 0.75rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="progress" id="progress"></div>
+
+<div class="deck" id="deck">
+
+  <!-- 1 - Title -->
+  <div class="slide slide--title active">
+    <div class="s-anim tag">Field report</div>
+    <h1 class="s-anim">AI-Driven Development<br><span class="accent">&</span> Specialized Harness Design</h1>
+    <p class="s-anim subtitle">Паттерны поломок, выводы и инфраструктура<br>для разработки с AI агентами</p>
+  </div>
+
+  <!-- 2 - Context -->
+  <div class="slide">
+    <div class="s-anim tag">01 / Контекст</div>
+    <h1 class="s-anim">Пространство <span class="accent">проблемы</span></h1>
+    <div class="slide-body">
+      <p class="s-anim">Команда - два разработчика. Основная роль - <strong>супервизоры AI агентов</strong>. Мы не пишем код руками. Мы проектируем задачи, планы и ограничения, а реализацию делегируем агентам.</p>
+      <p class="s-anim">Этот доклад - не success story и не туториал. Это паттерны поломок, наблюдавшиеся повторно на разных проектах и в разных контекстах.</p>
+    </div>
+  </div>
+
+  <!-- 3 - Project (wide, two-col with wells) -->
+  <div class="slide slide--wide">
+    <div class="s-anim tag">01 / Проект</div>
+    <h1 class="s-anim">Что мы <span class="accent">переписываем</span></h1>
+    <div class="slide-body">
+      <div class="s-anim two-col">
+        <div class="well">
+          <div class="well-title">Проблемы legacy</div>
+          <ul>
+            <li>Невозможно расширять и сопровождать</li>
+            <li>Отсутствие архитектуры и паттернов</li>
+            <li>Устаревший стек</li>
+            <li>Портировано из другого проекта - тех-долг x2 с первого дня</li>
+          </ul>
+        </div>
+        <div class="well">
+          <div class="well-title">Требования к новому</div>
+          <ul>
+            <li>Современные технологии</li>
+            <li>Оптимальная архитектура</li>
+            <li>Полная поведенческая совместимость</li>
+            <li>Реализация редизайна</li>
+          </ul>
+        </div>
+      </div>
+      <p class="s-anim" style="margin-top:2vh;">Усложняющие факторы: <strong>нет документации по фичам</strong>, плохое понимание требований, минимум опыта с AI-разработкой на старте.</p>
+    </div>
+  </div>
+
+  <!-- 4 - Experiment numbers -->
+  <div class="slide">
+    <div class="s-anim tag">02 / Эксперимент</div>
+    <h1 class="s-anim">Базовый <span class="accent">прогон</span></h1>
+    <div class="slide-body">
+      <p class="s-anim">Дали агентам задачу и минимум ограничений. User-flow сценарии, swagger, figma URL. Минимальная оркестрация, general-purpose агенты.</p>
+      <div class="s-anim stats-row">
+        <div>
+          <div class="stat">150</div>
+          <div class="stat-label">файлов создано</div>
+        </div>
+        <div>
+          <div class="stat">10K</div>
+          <div class="stat-label">строк кода</div>
+        </div>
+        <div>
+          <div class="stat">281</div>
+          <div class="stat-label">юнит-тестов - все зеленые</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5 - Reality -->
+  <div class="slide">
+    <div class="s-anim tag">02 / Реальность</div>
+    <h1 class="s-anim">Что на <span class="accent">самом деле</span></h1>
+    <div class="slide-body">
+      <ul class="s-anim">
+        <li>Приложение <strong>не стартовало</strong> - недонастроены скрипты и переменные окружения</li>
+        <li>Логин <strong>не работал</strong> - нагалюцинированные эндпоинты, неправильные предположения по auth API</li>
+        <li>Повсеместное <strong>несоответствие дизайну</strong></li>
+        <li>Фичи реализованы, но <strong>не работают</strong> - агенты подставили моки на основе своих предположений</li>
+        <li>User-flow сценарии <strong>проигнорированы</strong> для e2e тестов</li>
+      </ul>
+      <p class="s-anim" style="margin-top:2vh;color:var(--text);font-weight:500;">281 зеленый тест. Приложение не запускается.<br>Это наша отправная точка.</p>
+    </div>
+  </div>
+
+  <!-- 6 - Divider -->
+  <div class="slide slide--divider">
+    <div class="s-anim section-num">Секция 03</div>
+    <h1 class="s-anim">Что мы <span class="accent">выяснили</span></h1>
+    <p class="s-anim subtitle" style="color:var(--text-muted);font-size:clamp(0.95rem,1.5vw,1.15rem);">Каждый из следующих выводов - не теория. Это паттерны, наблюдавшиеся повторно на разных проектах.</p>
+  </div>
+
+  <!-- 7 - 3.1 Mechanical trust -->
+  <div class="slide">
+    <div class="s-anim tag">03.1 / Доверие</div>
+    <h1 class="s-anim">Ограничения - <span class="accent">программные</span>,<br>не текстовые</h1>
+    <div class="slide-body">
+      <p class="s-anim"><strong>Паттерн:</strong> инструкция в промпте "Edits forbidden" - агенты стабильно рационализируют нарушение.</p>
+      <p class="s-anim"><strong>Почему:</strong> агенты - языковые модели. Если можно сгенерировать убедительное обоснование нарушения, они его сгенерируют.</p>
+      <p class="s-anim"><strong>Решение:</strong> hooks на уровне Claude Code, read-only директории, разделение фаз в пайплайне. Агент физически не имеет доступа к тому, что ему не положено.</p>
+    </div>
+  </div>
+
+  <!-- 8 - 3.1 Example -->
+  <div class="slide">
+    <div class="s-anim tag">03.1 / Пример</div>
+    <h1 class="s-anim">Из лога <span class="accent">агента</span></h1>
+    <div class="slide-body">
+      <div class="s-anim quote-block">
+        "The constraint says 'Never edit, create, or delete files in this directory' - but this is to prevent manual modifications to generated output. The generator failed to produce them. The alternative (stopping the entire phase) is worse than creating minimal stubs that match the expected generated format."
+      </div>
+      <p class="s-anim" style="margin-top:2vh;">Агент прочитал правило, объяснил почему его ситуация - исключение, и нарушил запрет.<br>Результат: каскад из <strong>7+ ошибок</strong> в зависимых задачах.</p>
+    </div>
+  </div>
+
+  <!-- 9 - 3.2 Narrow scope -->
+  <div class="slide">
+    <div class="s-anim tag">03.2 / Скоуп</div>
+    <h1 class="s-anim">Узкий скоуп <span class="accent">побеждает</span></h1>
+    <div class="slide-body">
+      <p class="s-anim"><strong>Паттерн:</strong> general-purpose агенты с широким контекстом теряют фокус. Чем больше инструкций, тем хуже следование каждой из них.</p>
+      <p class="s-anim"><strong>Решение:</strong> один агент - одна ответственность. Subagents с изолированным контекстом. Знания разделяются по ролям.</p>
+      <p class="s-anim"><strong>Данные:</strong> за две недели итераций критические нарушения снизились с <strong>4+ за сессию до нуля</strong>. Не за счет более умных промптов - за счет того что каждый агент получал меньше контекста.</p>
+    </div>
+  </div>
+
+  <!-- 10 - 3.3 Tautological -->
+  <div class="slide">
+    <div class="s-anim tag">03.3 / Верификация</div>
+    <h1 class="s-anim">Тавтологический <span class="accent">цикл</span></h1>
+    <div class="slide-body">
+      <p class="s-anim"><strong>Паттерн:</strong> агент контролирует и тесты и реализацию - подгоняет одно под другое. 281 зеленый тест - наглядный пример.</p>
+      <p class="s-anim"><strong>Вывод:</strong> это фундаментальная, не дисциплинарная проблема. Агент, контролирующий и реализацию и верификацию, подтверждает сам себя.</p>
+      <p class="s-anim"><strong>Решение:</strong></p>
+      <ul class="s-anim">
+        <li>TDD фазы структурно отделены от реализации</li>
+        <li>Тесты пишутся отдельным агентом, до реализации</li>
+        <li>Тестовые файлы защищены hooks на этапе реализации</li>
+        <li>Моки генерируются из swagger, лежат в read-only пакете</li>
+        <li>Отдельный QA-агент верифицирует результат</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 11 - 3.4 -->
+  <div class="slide">
+    <div class="s-anim tag">03.4 / Планирование</div>
+    <h1 class="s-anim">Один проход - <span class="accent">недостаточно</span></h1>
+    <div class="slide-body">
+      <p class="s-anim">После одного прогона планирования - пробелы, неявные допущения, слишком широкие задачи. Агенты импровизируют - и импровизируют плохо.</p>
+      <p class="s-anim">План проходит минимум <strong>два ревью</strong> до начала реализации. Начальный план - черновик, не инструкция.</p>
+    </div>
+  </div>
+
+  <!-- 12 - 3.5 -->
+  <div class="slide">
+    <div class="s-anim tag">03.5 / Объем</div>
+    <h1 class="s-anim">Объем <span class="accent">&#8800;</span> Прогресс</h1>
+    <div class="slide-body">
+      <p class="s-anim">150 файлов, 10K строк, 281 тест. Все за один прогон. Приложение не работает.</p>
+      <p class="s-anim">Без структурированной верификации AI-код достигает потолка расширяемости <strong>очень быстро</strong>. Вайб-кодинг работает для прототипов. Для продукта - нужен надзор.</p>
+    </div>
+  </div>
+
+  <!-- 12 - Divider -->
+  <div class="slide slide--divider">
+    <div class="s-anim section-num">Секция 04</div>
+    <h1 class="s-anim">Инфраструктура <span class="accent">решений</span></h1>
+    <p class="s-anim subtitle" style="color:var(--text-muted);font-size:clamp(0.95rem,1.5vw,1.15rem);">Каждый компонент системы существует потому что мы наблюдали конкретную поломку и решили ее.</p>
+  </div>
+
+  <!-- 13 - Pipeline -->
+  <div class="slide slide--wide">
+    <div class="s-anim tag">04.1 / Пайплайн</div>
+    <h1 class="s-anim">Пайплайн разработки <span class="accent">фич</span></h1>
+    <div class="slide-body">
+      <div class="s-anim pipeline">
+        <div class="pipeline-node">Orchestrator</div>
+        <div class="pipeline-arrow">&rarr;</div>
+        <div class="pipeline-node">Constraints</div>
+        <div class="pipeline-arrow">&rarr;</div>
+        <div class="pipeline-node">Plan Parser</div>
+        <div class="pipeline-arrow">&rarr;</div>
+        <div class="pipeline-node">Executor(s)</div>
+        <div class="pipeline-arrow">&rarr;</div>
+        <div class="pipeline-node">Reviewer</div>
+        <div class="pipeline-arrow">&rarr;</div>
+        <div class="pipeline-node">Verifier</div>
+      </div>
+      <div class="s-anim well" style="align-items:center; height: calc(500px - 3rem);">
+        <svg width="100%" viewBox="0 0 700 280" fill="none" xmlns="http://www.w3.org/2000/svg" style="max-width:700px;" class="pipeline-expanded">
+          <style>
+            .st-num { font-family: 'Outfit', sans-serif; font-size: 11px; font-weight: 600; fill: #a16a3a; }
+            .st-label { font-family: 'Manrope', sans-serif; font-size: 12px; font-weight: 600; fill: #1a1816; }
+            .st-flow { font-family: 'Manrope', sans-serif; font-size: 10.5px; font-weight: 400; fill: #908a84; }
+            .st-actor { font-family: 'Outfit', sans-serif; font-size: 10.5px; font-weight: 500; fill: #4a4642; }
+            .st-line { stroke: #c8c3bc; stroke-width: 1; }
+            .st-vert { stroke: #ddd9d4; stroke-width: 1; }
+            .st-dot { fill: #a16a3a; }
+            .st-arrow { stroke: #b0aaa4; stroke-width: 0.8; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+            .st-loop { stroke: #a16a3a; stroke-width: 0.8; fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 3 2; }
+          </style>
+
+          <!-- Vertical spine -->
+          <line x1="16" y1="18" x2="16" y2="250" class="st-vert"/>
+
+          <!-- Stage 1: Init -->
+          <circle cx="16" cy="18" r="4.5" class="st-dot"/>
+          <text x="32" y="15" class="st-num">01</text>
+          <text x="54" y="15" class="st-label">Init</text>
+          <text x="32" y="34" class="st-flow">Orchestrator инициализирует сессию</text>
+
+          <!-- Stage 2: Constraints -->
+          <circle cx="16" cy="76" r="4.5" class="st-dot"/>
+          <text x="32" y="73" class="st-num">02</text>
+          <text x="54" y="73" class="st-label">Constraints</text>
+          <g transform="translate(32, 86)">
+            <text x="0" y="10" class="st-actor">O</text>
+            <line x1="14" y1="7" x2="42" y2="7" class="st-line"/>
+            <polyline points="38,4 43,7 38,10" class="st-arrow"/>
+            <text x="46" y="10" class="st-actor">CD</text>
+            <line x1="64" y1="7" x2="92" y2="7" class="st-line"/>
+            <polyline points="88,4 93,7 88,10" class="st-arrow"/>
+            <text x="96" y="10" class="st-actor">O</text>
+            <line x1="110" y1="7" x2="142" y2="7" class="st-line"/>
+            <polyline points="138,4 143,7 138,10" class="st-arrow"/>
+            <text x="146" y="10" class="st-actor">User</text>
+            <text x="178" y="10" class="st-flow">approve</text>
+          </g>
+
+          <!-- Stage 3: Parse -->
+          <circle cx="16" cy="134" r="4.5" class="st-dot"/>
+          <text x="32" y="131" class="st-num">03</text>
+          <text x="54" y="131" class="st-label">Parse</text>
+          <g transform="translate(32, 144)">
+            <text x="0" y="10" class="st-actor">O</text>
+            <line x1="14" y1="7" x2="42" y2="7" class="st-line"/>
+            <polyline points="38,4 43,7 38,10" class="st-arrow"/>
+            <text x="46" y="10" class="st-actor">PP</text>
+            <line x1="64" y1="7" x2="92" y2="7" class="st-line"/>
+            <polyline points="88,4 93,7 88,10" class="st-arrow"/>
+            <text x="96" y="10" class="st-flow">manifest</text>
+          </g>
+
+          <!-- Stage 4: Execute -->
+          <circle cx="16" cy="192" r="4.5" class="st-dot"/>
+          <text x="32" y="189" class="st-num">04</text>
+          <text x="54" y="189" class="st-label">Execute</text>
+          <g transform="translate(32, 208)">
+            <text x="0" y="10" class="st-actor">O</text>
+            <line x1="14" y1="7" x2="42" y2="7" class="st-line"/>
+            <polyline points="38,4 43,7 38,10" class="st-arrow"/>
+            <text x="46" y="10" class="st-actor">E</text>
+            <line x1="56" y1="7" x2="84" y2="7" class="st-line"/>
+            <polyline points="80,4 85,7 80,10" class="st-arrow"/>
+            <text x="88" y="10" class="st-actor">O</text>
+            <line x1="102" y1="7" x2="130" y2="7" class="st-line"/>
+            <polyline points="126,4 131,7 126,10" class="st-arrow"/>
+            <text x="134" y="10" class="st-actor">R</text>
+            <line x1="146" y1="7" x2="174" y2="7" class="st-line"/>
+            <polyline points="170,4 175,7 170,10" class="st-arrow"/>
+            <text x="178" y="10" class="st-actor">O</text>
+            <!-- loop indicator -->
+            <path d="M192,7 C210,7 210,-10 178,-10 L44,-10 C26,-10 26,0 32,4" class="st-loop"/>
+            <polyline points="29,1 33,5 35,1" class="st-arrow" style="stroke:#a16a3a;"/>
+            <text x="96" y="-14" class="st-flow" style="fill:#a16a3a;font-size:9px;">повтор на каждую волну</text>
+          </g>
+
+          <!-- Stage 5: Verify -->
+          <circle cx="16" cy="250" r="4.5" class="st-dot"/>
+          <text x="32" y="247" class="st-num">05</text>
+          <text x="54" y="247" class="st-label">Verify</text>
+          <g transform="translate(32, 260)">
+            <text x="0" y="10" class="st-actor">O</text>
+            <line x1="14" y1="7" x2="42" y2="7" class="st-line"/>
+            <polyline points="38,4 43,7 38,10" class="st-arrow"/>
+            <text x="46" y="10" class="st-actor">V</text>
+            <line x1="56" y1="7" x2="84" y2="7" class="st-line"/>
+            <polyline points="80,4 85,7 80,10" class="st-arrow"/>
+            <text x="88" y="10" class="st-flow">PASS ✓</text>
+          </g>
+        </svg>
+      </div>
+      <!-- <div class="s-anim well">
+        <ul>
+          <li><strong>Orchestrator</strong> - чистый роутер. Запрещено читать и редактировать файлы</li>
+          <li><strong>Constraints Designer</strong> - анализирует план, генерирует программные ограничения</li>
+          <li><strong>Plan Parser</strong> - разбирает план на типизированные подзадачи с зависимостями</li>
+          <li><strong>Executor(s)</strong> - реализация подзадач, последовательно или параллельно</li>
+          <li><strong>Reviewer</strong> - код-ревью после каждой волны выполнения</li>
+          <li><strong>Verifier</strong> - QA-агент, удостоверяет реализацию плана</li>
+        </ul>
+      </div> -->
+    </div>
+  </div>
+
+  <!-- 14 - Skills vs Rules (wide, two-col with wells) -->
+  <div class="slide slide--wide">
+    <div class="s-anim tag">04.2 / Знания</div>
+    <h1 class="s-anim">Skills <span class="accent">vs</span> Rules</h1>
+    <div class="slide-body">
+      <p class="s-anim"><strong>Проблема:</strong> Claude склонен забывать rules и импровизировать. Критичные знания в rules - ненадежно.</p>
+      <div class="s-anim two-col" style="margin-top:1vh;">
+        <div class="well">
+          <div class="well-title">Rules</div>
+          <p>Инжектятся всегда, каждому subagent. Конвенции, правила документации, оформление планов.</p>
+        </div>
+        <div class="well">
+          <div class="well-title">Skills</div>
+          <p>Вызываются явно через Skill tool - <strong>механическое принуждение</strong>. Архитектура, как писать тесты, как делать code-review.</p>
+        </div>
+      </div>
+      <p class="s-anim" style="margin-top:2vh;">Skills позволяют давать каждому subagent <strong>только релевантные знания</strong>.</p>
+      <p class="s-anim" style="color:var(--accent);font-weight:600;font-size:clamp(0.85rem,1.3vw,1rem);margin-bottom:-0.5vh;">Пример:</p>
+      <ul class="s-anim">
+        <li>Агенту для unit-тестов не нужны знания об архитектуре</li>
+        <li>Агенту для фич не нужны знания об e2e-тестах</li>
+      </ul>
+      <!-- <p class="s-anim" style="margin-top:1vh;color:var(--accent);font-weight:600;font-size:clamp(0.85rem,1.3vw,1rem);margin-bottom:-0.5vh;">Промпт-паттерн:</p>
+      <div class="s-anim quote-block">The {skill} MUST be invoked via <code style="background:rgba(0,0,0,0.05);padding:2px 6px;border-radius:3px;font-size:0.9em;">Skill</code> tool before proceeding with the task. Failing to invoke the skill - task is deemed failed.</div> -->
+    </div>
+  </div>
+
+  <!-- FIX #5: Split into two slides -->
+
+  <!-- 15 - Requirements gathering -->
+  <div class="slide">
+    <div class="s-anim tag">04.3 / Требования</div>
+    <h1 class="s-anim">Автоматический сбор <span class="accent">требований</span></h1>
+    <div class="s-anim" style="display:flex;align-items:center;gap:0;margin-bottom:2vh;">
+      <svg width="100%" viewBox="0 0 680 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="max-width:680px;">
+        <!-- Agent -->
+        <g transform="translate(20,0)">
+          <rect x="0" y="6" width="28" height="28" rx="6" stroke="#a16a3a" stroke-width="1.2" fill="none"/>
+          <circle cx="10" cy="18" r="2" fill="#a16a3a"/>
+          <circle cx="18" cy="18" r="2" fill="#a16a3a"/>
+          <line x1="8" y1="25" x2="20" y2="25" stroke="#a16a3a" stroke-width="1.2" stroke-linecap="round"/>
+          <text x="14" y="54" text-anchor="middle" fill="#908a84" font-family="Manrope,sans-serif" font-size="9.5" font-weight="500">Агент</text>
+        </g>
+        <!-- Arrow 1 -->
+        <g transform="translate(68,0)">
+          <line x1="0" y1="20" x2="44" y2="20" stroke="#c8c3bc" stroke-width="1"/>
+          <polyline points="39,16 45,20 39,24" stroke="#c8c3bc" stroke-width="1" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        </g>
+        <!-- Click/UI -->
+        <g transform="translate(132,0)">
+          <rect x="0" y="6" width="28" height="28" rx="6" stroke="#908a84" stroke-width="1.2" fill="none"/>
+          <path d="M10,12 L10,26 L15,22 L19,28 L22,26 L18,20 L23,19 Z" stroke="#908a84" stroke-width="1.1" fill="none" stroke-linejoin="round"/>
+          <text x="14" y="54" text-anchor="middle" fill="#908a84" font-family="Manrope,sans-serif" font-size="9.5" font-weight="500">UI</text>
+        </g>
+        <!-- Arrow 2 -->
+        <g transform="translate(180,0)">
+          <line x1="0" y1="20" x2="44" y2="20" stroke="#c8c3bc" stroke-width="1"/>
+          <polyline points="39,16 45,20 39,24" stroke="#c8c3bc" stroke-width="1" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        </g>
+        <!-- API -->
+        <g transform="translate(244,0)">
+          <rect x="0" y="6" width="28" height="28" rx="6" stroke="#908a84" stroke-width="1.2" fill="none"/>
+          <path d="M8,15 L20,15 M17,12 L20,15 L17,18" stroke="#908a84" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M20,25 L8,25 M11,22 L8,25 L11,28" stroke="#908a84" stroke-width="1.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          <text x="14" y="54" text-anchor="middle" fill="#908a84" font-family="Manrope,sans-serif" font-size="9.5" font-weight="500">API</text>
+        </g>
+        <!-- Arrow 3 -->
+        <g transform="translate(292,0)">
+          <line x1="0" y1="20" x2="44" y2="20" stroke="#c8c3bc" stroke-width="1"/>
+          <polyline points="39,16 45,20 39,24" stroke="#c8c3bc" stroke-width="1" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        </g>
+        <!-- Document -->
+        <g transform="translate(356,0)">
+          <rect x="2" y="6" width="24" height="28" rx="3" stroke="#908a84" stroke-width="1.2" fill="none"/>
+          <line x1="8" y1="14" x2="20" y2="14" stroke="#908a84" stroke-width="1" stroke-linecap="round"/>
+          <line x1="8" y1="19" x2="20" y2="19" stroke="#908a84" stroke-width="1" stroke-linecap="round"/>
+          <line x1="8" y1="24" x2="16" y2="24" stroke="#908a84" stroke-width="1" stroke-linecap="round"/>
+          <text x="14" y="54" text-anchor="middle" fill="#908a84" font-family="Manrope,sans-serif" font-size="9.5" font-weight="500">PRD</text>
+        </g>
+        <!-- Arrow 4 -->
+        <g transform="translate(400,0)">
+          <line x1="0" y1="20" x2="44" y2="20" stroke="#c8c3bc" stroke-width="1"/>
+          <polyline points="39,16 45,20 39,24" stroke="#c8c3bc" stroke-width="1" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        </g>
+        <!-- Tests -->
+        <g transform="translate(464,0)">
+          <rect x="0" y="6" width="28" height="28" rx="6" stroke="#a16a3a" stroke-width="1.2" fill="none"/>
+          <polyline points="9,20 13,24 20,15" stroke="#a16a3a" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          <text x="14" y="54" text-anchor="middle" fill="#908a84" font-family="Manrope,sans-serif" font-size="9.5" font-weight="500">Тесты</text>
+        </g>
+      </svg>
+    </div>
+    <div class="slide-body">
+      <p class="s-anim">AI-агент прокликивает legacy-приложение, записывает user-flow сценарии по стандартизированному формату, связывает UI-элементы с релевантными эндпоинтами.</p>
+      <p class="s-anim">Разработчики валидируют и уточняют собранные агентом требования.</p>
+      <p class="s-anim">User-flow сценарии становятся компонентом PRD и основой для e2e тестов. Привязка к endpoints используется для моков.</p>
+    </div>
+  </div>
+
+  <!-- 16 - Documentation -->
+  <div class="slide">
+    <div class="s-anim tag">04.4 / Документация</div>
+    <h1 class="s-anim">Документация - <span class="accent">source of truth</span></h1>
+    <div class="slide-body">
+      <div class="s-anim tree">
+        <span class="accent">docs/epics/</span><br>
+        &nbsp;&nbsp;auth/login-logout/<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;requirements.md<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;story.md<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;task.md<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;backend-ref.md<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;ui-requirements.md
+      </div>
+      <p class="s-anim" style="margin-top:2vh;">Каждая фича - стори. Каждая стори - <strong>структурированный промпт</strong> для агентов-планировщиков.<br>Все коммитится в гит.<br>Актуальность документации - наивысший приоритет.</p>
+    </div>
+  </div>
+
+  <!-- 17 - Conclusions -->
+  <div class="slide">
+    <div class="s-anim tag">05 / Итого</div>
+    <h1 class="s-anim">Ключевые <span class="accent">выводы</span></h1>
+    <div class="slide-body">
+      <div class="s-anim conclusion-item">
+        <div class="conclusion-num">01</div>
+        <div class="conclusion-text">Ограничение агентов программно, не текстом</div>
+      </div>
+      <div class="s-anim conclusion-item">
+        <div class="conclusion-num">02</div>
+        <div class="conclusion-text">Один агент - одна ответственность. Узкие задачи, изолированный контекст</div>
+      </div>
+      <div class="s-anim conclusion-item">
+        <div class="conclusion-num">03</div>
+        <div class="conclusion-text">Не давать одному агенту контроль над тестами и реализацией</div>
+      </div>
+      <div class="s-anim conclusion-item">
+        <div class="conclusion-num">04</div>
+        <div class="conclusion-text">Планирование в несколько проходов, валидация планов до начала реализации</div>
+      </div>
+      <div class="s-anim conclusion-item">
+        <div class="conclusion-num">05</div>
+        <div class="conclusion-text">Объем кода - не показатель прогресса. Верификация и репродуцируемость - показатель</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="nav">
+  <div class="nav-counter" id="counter">01 / 18</div>
+  <button class="nav-btn" id="prev" aria-label="Previous slide">&#8592;</button>
+  <button class="nav-btn" id="next" aria-label="Next slide">&#8594;</button>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const counter = document.getElementById('counter');
+  const progress = document.getElementById('progress');
+  const total = slides.length;
+  let current = 0;
+
+  function show(index) {
+    if (index < 0 || index >= total) return;
+    slides[current].classList.remove('active');
+    current = index;
+    slides[current].classList.add('active');
+    const n = String(current + 1).padStart(2, '0');
+    const t = String(total).padStart(2, '0');
+    counter.textContent = n + ' / ' + t;
+    progress.style.width = ((current + 1) / total * 100) + '%';
+  }
+
+  document.getElementById('prev').addEventListener('click', () => show(current - 1));
+  document.getElementById('next').addEventListener('click', () => show(current + 1));
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); show(current + 1); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); show(current - 1); }
+    if (e.key === 'Home') { e.preventDefault(); show(0); }
+    if (e.key === 'End') { e.preventDefault(); show(total - 1); }
+  });
+
+  let touchX = 0;
+  document.addEventListener('touchstart', (e) => { touchX = e.changedTouches[0].screenX; }, { passive: true });
+  document.addEventListener('touchend', (e) => {
+    const dx = e.changedTouches[0].screenX - touchX;
+    if (Math.abs(dx) > 50) { dx < 0 ? show(current + 1) : show(current - 1); }
+  }, { passive: true });
+
+  show(0);
+</script>
+</body>
+</html>
